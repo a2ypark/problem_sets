@@ -381,6 +381,29 @@ performance_summary_d |>
 
 (Bonus: also calculate the SEM in the summary data, and then add errorbars to the plot with `geom_errorbar`!)
 
+```{r}
+## standard error is the standard deviation divided by the root of sample size! 
+## i think we have to put it as a value into the table...?
+## so i think we mutate it for stdev!
+## what is the standard error... umm...
+## do i need to group-by this before i process it in...
+## i didn't tell it to do row-wise, but it still only gives me 0 for the sd(MeanImprovementScore) ?? 
+
+performance_summary_dsem = performance_summary_d |>
+  group_by(ConfrontationalGame, MusicCondition) |>
+  mutate(
+    SEM = sd(MeanImprovementScore)
+      ##sqrt(max(performance_summary_d$Subject))
+  )
+
+```
+
+
+```{r}
+SEM = sd(performance_summary_d$MeanImprovementScore) / sqrt((length(performance_summary_d)/2))
+```
+
+
 
 Not quite as exact a replication of the effect as Fig. 1. This concurs with the [replication report](https://osf.io/7i2tf/), which says that the hypothesis 1 effect replicated, but hypothesis 2 did not. 
 
