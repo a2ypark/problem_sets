@@ -301,17 +301,25 @@ The rating hypothesis analysis also requires some grouped manipulation. The expe
 
 ```{r}
 rating_summary_d = rating_hyp_long_d_edit2 |>
-    group_by(Emotion, IsRecall) |>
-    mutate(MeanRating = mean(Rating))
-
-## i'm unsure what the summarize would do here? if i summarize immediately after mutating then
-## it sends a warning about grouping by emotion & actually does not keep the new meanrating column
-## which i doubt is intended?
-## maybe i'll catch this on a resubmit?
-## but for now i don't know if i need a summarize
-## from the later code it also doesn't seem like they want a table of only a few vars?
-
+    group_by(Emotion, IsRecall, ConfrontationalGame) |>
+    summarize(MeanRating = mean(Rating))
   
+
+# performance_summary_d = performance_diff_d |>
+#   group_by(ConfrontationalGame, MusicCondition) |>
+#   mutate(
+#     MeanImprovementScore = mean(PostMusic - PreMusic)
+#   )
+  ## summarize keeps the groupby organization when it outputs the table, so it does better here
+# 
+# performance_summary_d2 = performance_diff_d |>
+#   group_by(ConfrontationalGame, MusicCondition) |>
+#   summarize(
+#     MeanImprovementScore = mean(PostMusic - PreMusic),
+#     SEM = sd(PostMusic - PreMusic)/sqrt(n())
+#   )  
+
+
 ```
 
 Let's take a look at the result:
@@ -358,22 +366,28 @@ If you don't understand every step of that code (or any other `dplyr` code), it 
 Now we're finally to reproduce Fig. 2 from Tamir et al., we just need to get the mean differences within each game and each kind of music, and save them to a variable called `MeanImprovementScore`:
 
 ```{r}
-performance_summary_d = performance_diff_d |>
-  group_by(ConfrontationalGame, MusicCondition) |>
-  mutate(
-    MeanImprovementScore = mean(PostMusic - PreMusic)
-  )
-  # your code here
-```
+# performance_summary_d = performance_diff_d |>
+#   group_by(ConfrontationalGame, MusicCondition) |>
+#   mutate(
+#     MeanImprovementScore = mean(PostMusic - PreMusic)
+#   )
+  ## summarize keeps the groupby organization when it outputs the table, so it does better here
 
-```{r}
-performance_summary_d
+performance_summary_d2 = performance_diff_d |>
+  group_by(ConfrontationalGame, MusicCondition) |>
+  summarize(
+    MeanImprovementScore = mean(PostMusic - PreMusic),
+    SEM = sd(PostMusic - PreMusic)/sqrt(n())
+  )
+
+  ## added the SEM calculation inside this summarize to avoid having to do it again later for error bars
+
 ```
 
 and plot it!
 
 ```{r TamirFig2}
-performance_summary_d |>
+performance_summary_d2 |>
   ggplot(aes(x=ConfrontationalGame, y=MeanImprovementScore, fill=MusicCondition)) +
   geom_bar(position="dodge", stat="identity") + 
   scale_fill_brewer(palette="Set1")
@@ -383,27 +397,18 @@ performance_summary_d |>
 
 ```{r}
 ## standard error is the standard deviation divided by the root of sample size! 
-## i think we have to put it as a value into the table...?
-## so i think we mutate it for stdev!
-## what is the standard error... umm...
-## do i need to group-by this before i process it in...
-## i didn't tell it to do row-wise, but it still only gives me 0 for the sd(MeanImprovementScore) ?? 
 
-performance_summary_dsem = performance_summary_d |>
-  group_by(ConfrontationalGame, MusicCondition) |>
-  mutate(
-    SEM = sd(MeanImprovementScore)
-      ##sqrt(max(performance_summary_d$Subject))
-  )
+performance_summary_d2 |>
+  ggplot(aes(x=ConfrontationalGame, y=MeanImprovementScore, fill=MusicCondition, group=MusicCondition)) +
+  geom_bar(position="dodge", stat="identity") + 
+  geom_errorbar(
+    aes(x = ConfrontationalGame, ymin = (MeanImprovementScore - SEM), ymax = (MeanImprovementScore + SEM)),
+    width = 0.5, position=position_dodge(0.9)
+  ) +
+  scale_fill_brewer(palette="Set1")
+
 
 ```
-
-
-```{r}
-SEM = sd(performance_summary_d$MeanImprovementScore) / sqrt((length(performance_summary_d)/2))
-```
-
-
 
 Not quite as exact a replication of the effect as Fig. 1. This concurs with the [replication report](https://osf.io/7i2tf/), which says that the hypothesis 1 effect replicated, but hypothesis 2 did not. 
 
